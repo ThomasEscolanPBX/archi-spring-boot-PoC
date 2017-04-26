@@ -1,5 +1,5 @@
 # archi-spring-boot-PoC
-Spring Boot proof of concept for architecture studies
+Spring Boot proof of concept for architecture studies : Data, MVC, etc.
 
 DEMO Spring Boot, Data & MVC https://drive.google.com/open?id=1NRag-QwuMjVpqeieqMxGy7O-XnXFyvyuDT-In97YS_o
 
