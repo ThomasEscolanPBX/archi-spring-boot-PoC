@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org"
+	xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+		<title>Who said that? checkin</title>
+		<link rel="stylesheet" href="webjars/bootstrap/3.3.7-1/css/bootstrap.min.css" />
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script src="webjars/bootstrap/3.3.7-1/js/bootstrap.min.js"></script>
+	</head>
+	<body>
+
+	<div class="container">
+		<p th:if="${param.error}" class="alert alert-danger">Invalid login and/or password.</p>
+		<p th:if="${param.logout}" class="alert alert-info">You have been logged out. See you soon!</p>
+
+		<form th:action="@{/login}" method="post">
+			<h2 class="form-signin-heading">Please sign in</h2>
+			<input type="text" name="username" placeholder="login"
+				   required="required" autofocus="autofocus" />
+			<input type="password" name="password" placeholder="password"
+				   required="required" />
+			<button type="submit" class="btn btn-primary btn-lg btn-block"><span class="glyphicon glyphicon-ok-circle"></span> Sign In</button>
+		</form>
+	</div>
+	</body>
+</html>

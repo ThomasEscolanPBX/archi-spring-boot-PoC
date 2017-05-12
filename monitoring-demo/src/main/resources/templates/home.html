@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org"
+	xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+		<title>Who said that? home</title>
+		<link href="webjars/bootstrap/3.3.7-1/css/bootstrap.min.css" rel="stylesheet" media="screen" />
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script src="webjars/bootstrap/3.3.7-1/js/bootstrap.min.js"></script>
+	</head>
+	<body>
+	<div class="container">
+		<h1>Welcome!</h1>
+		<p>Click <a class="btn btn-primary" th:href="@{/business}"><span class="glyphicon glyphicon-tasks"></span></a> to have access to the business GUI.</p>
+		<p>Click <a class="btn btn-warning" th:href="@{/swagger-ui.html}"><span class="glyphicon glyphicon-info-sign"></span></a> to see the REST API documentation / admin GUI.</p>
+	</div>
+	</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org"
+	xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity3">
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
+	<title>Who said that? tasks</title>
+	<link href="webjars/bootstrap/3.3.7-1/css/bootstrap.min.css" rel="stylesheet" media="screen" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+	<script src="webjars/bootstrap/3.3.7-1/js/bootstrap.min.js"></script>
+	<script src="http://ajax.aspnetcdn.com/ajax/knockout/knockout-3.4.1.js"></script>
+</head>
+<script type="text/javascript">
+	function ajax(uri, method, data) {
+		var request = {
+				url: 'http://localhost:8080' + uri,
+				type: method,
+				contentType: "application/json",
+				accepts: "application/json",
+				cache: false,
+				dataType: 'json',
+				data: JSON.stringify(data),
+				error: function(jqXHR) {
+					console.log("ajax error " + jqXHR.status);
+				}
+		};
+		return $.ajax(request);
+	};
+	function handleChanges(jqXHR, textStatus) {
+		if (jqXHR.status == 200)	this.search();	// cf. #bind(self)
+		else if (jqXHR.responseText) {
+	        var responseJson = jQuery.parseJSON(jqXHR.responseText);
+			alert(responseJson.error);
+		}
+		else alert(textStatus);
+	}
+</script>
+<body>
+	<div id="main" class="container">
+	    <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+			<div class="container">
+				<p th:inline="text" class="navbar-brand">
+				<a class="btn btn-primary" th:href="@{/home}"><span class="glyphicon glyphicon-home"></span></a>
+				Hello <span style="color: black">[[${#httpServletRequest.remoteUser}]]</span>! Let's discover who said what:
+				</p>
+				<form th:action="@{/logout}" class="navbar-form navbar-right">
+					<button type="submit" class="btn btn-danger btn-sm"><span class="glyphicon glyphicon-off"></span> Sign Out</button>
+				</form>
+			</div>
+		</nav>
+		<div class="navbar"><!-- needed. don't know why! --></div>
+
+		<div class="input-group col-md-12" role="search">
+			<input data-bind="textInput: textPattern" placeholder="Search..." class="form-control input-lg" />
+			<span class="input-group-btn">
+				<button data-bind="click: search" class="btn btn-info btn-lg">
+					<i class="glyphicon glyphicon-search"></i>
+				</button>
+			</span>
+		</div>
+		<table class="table table-striped">
+			<tr>
+				<td><b>Author</b></td>
+				<td colspan="2"><b>Quote</b></td>
+				<td><b>References</b></td>
+				<td style="width: 1px;"></td>
+			</tr>
+		<!-- ko foreach: quotes -->
+			<tr>
+				<td><span data-bind="text: quoteAuthor.name"></span></td>
+				<td>
+					<a data-bind="click: $parent.likeQuote" title="click to like it"><span data-bind="visible: !quoteLiked" class="glyphicon glyphicon-heart-empty" style="color:red"></span></a>
+					<a data-bind="click: $parent.likeQuote" title="click to unlike it"><span data-bind="visible: quoteLiked" class="glyphicon glyphicon-heart" style="color:red"></span></a>
+					<span data-bind="visible: likesCount"><span data-bind="text: likesCount" style="color:red"></span></span>
+				</td>
+				<td>&laquo;&nbsp;<span data-bind="text: quoteText"></span>&nbsp;&raquo;</td>
+				<td style="width: 1px;">
+					<table data-bind="foreach: quoteReferences">
+					<tr>
+						<td>
+						<a data-bind="click: $root.removeRef" title="Remove Reference"><span class="glyphicon glyphicon-remove" style="color:darkred"></span></a>
+						<a data-bind="attr: { href: url }" target="_blank">ref&nbsp;#<span data-bind="text: 1 + $index()"></span></a>
+						</td><td>&nbsp;
+						<a data-bind="click: $root.starRef" title="click to star it"><span data-bind="visible: !refStarred" class="glyphicon glyphicon-star-empty" style="color:gold"></span></a>
+						<a data-bind="click: $root.starRef" title="click to unstar it"><span data-bind="visible: refStarred" class="glyphicon glyphicon-star" style="color:gold"></span></a>
+						</td><td>
+						<span data-bind="visible: starsCount"><span data-bind="text: starsCount" style="color:gold"></span></span>
+						</td>
+					</tr>
+					</table>
+					<button data-bind="click: $parent.beginAddRef" class="btn btn-sm btn-primary">Add Reference</button>
+				</td>
+				<td style="width: 1px;">
+					<button data-bind="click: $parent.removeQuote" class="btn btn-danger">Remove Quote</button>
+				</td>
+			</tr>
+			<tr data-bind="if: quoteEvent" class="text-muted">
+				<td align="right"><b>Event:</b></td>
+				<td colspan="2"><span data-bind="text: quoteEvent.name"></span> - <span data-bind="text: quoteEvent.country.name"></span></td>
+				<td><span data-bind="text: quoteEvent.date"></span></td>
+				<td style="width: 1px;"></td>
+			</tr>
+		<!-- /ko -->
+		</table>
+		<button data-bind="click: beginAddQuote" class="btn btn-primary">Add Quote</button>
+	</div>
+	<script type="text/javascript">
+		function QuotesViewModel() {
+			var self = this;
+			self.textPattern = ko.observable("");
+			self.quotes = ko.observableArray();
+			self.search = function() {
+				self.quotes([]);	// reset list
+				var uri = '/quotes?search=' + self.textPattern();
+				ajax(uri, 'GET').done(function(data) {
+					for (index in data) {
+						var item = data[index];
+						console.log(item);
+						self.quotes.push(item);
+					}
+				})
+			}
+
+			self.beginAddQuote = function() {
+				$('#addQuoteDialog').modal('show').removeClass('hide');
+			}
+
+			self.likeQuote = function(quote) {
+				var uri = '/quotes/' + quote.id;
+				ajax(uri, 'PUT').complete(handleChanges.bind(self));
+			}
+			self.removeQuote = function(quote) {
+				console.log(quote);
+				if (confirm("Remove the quote?")) {
+					var uri = '/quotes/' + quote.id;
+					ajax(uri, 'DELETE').complete(handleChanges.bind(self));
+				}
+			}
+
+			self.beginAddRef = function(quote) {
+				$('#quoteId').val(quote.id);
+				$('#addRefDialog').modal('show').removeClass('hide');
+			}
+
+			self.starRef = function(ref) {
+				var uri = '/quotes/' + self.findRefQuote(ref) + "/ref/" + ref.id;
+				ajax(uri, 'PUT').complete(handleChanges.bind(self));
+			}
+			self.removeRef = function(ref) {
+				if (confirm("Remove the reference?")) {
+					var uri = '/quotes/' + self.findRefQuote(ref) + "/ref/" + ref.id;
+					ajax(uri, 'DELETE').complete(handleChanges.bind(self))
+				}
+			}
+
+			self.findRefQuote = function(reference) {
+				for (quoteIndex in self.quotes()) {
+					var quote = self.quotes()[quoteIndex];
+					for (refIndex in quote.quoteReferences) {
+						var ref = quote.quoteReferences[refIndex];
+						if (ref.id == reference.id)	return quote.id
+					}
+				}
+				return -1;
+			}
+		}
+		ko.applyBindings(new QuotesViewModel(), $('#main')[0]);
+	</script>
+	<div id="addRefDialog" class="container bg-primary modal hide fade" tabindex="=1" role="dialog" aria-labelledby="addRefDialogLabel" aria-hidden="true">
+		<div class="modal-header">
+			<button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
+			<h3 id="addQuoteDialogLabel">Add a New Reference</h3>
+		</div>
+		<div class="modal-body text-muted">
+			<form class="form-horizontal">
+				<div class="control-group">
+					<label class="control-label" style="color: white" for="refUrl">URL</label>
+					<div class="controls">
+						<input id="refUrl" size="50" maxlength="255" required="required" autofocus="autofocus"
+						data-bind="value: refUrl" placeholder="Enter reference URL..."></input>
+						<input id="quoteId" type="hidden"></input>
+					</div>
+				</div>
+			</form>
+		</div>
+		<div class="modal-footer">
+			<button class="btn btn-success" data-bind="click: addRef">Confirm</button>
+			<button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+		</div>
+	</div>
+	<script type="text/javascript">
+		function RefDialogModel() {
+			var self = this;
+			self.refUrl = ko.observable();
+			self.addRef = function() {
+				console.log(self);
+				var data = { "url": self.refUrl() };
+				var uri = '/quotes/' + $('#quoteId').val() + '/ref';
+				ajax(uri, 'POST', data).done(function(data) {
+					console.log(data);
+				})
+	            $('#addRefDialog').modal('hide');
+				self.refUrl("");
+			}
+		}
+		ko.applyBindings(new RefDialogModel(), $('#addRefDialog')[0]);
+	</script>
+	<div id="addQuoteDialog" class="container bg-primary modal hide fade" tabindex="=1" role="dialog" aria-labelledby="addQuoteDialogLabel" aria-hidden="true">
+		<div class="modal-header">
+			<button type="button" class="close" data-dismiss="modal" aria-hidden="true">x</button>
+			<h3 id="addQuoteDialogLabel">Add a New Quote</h3>
+		</div>
+		<div class="modal-body text-muted">
+			<form class="form-horizontal">
+				<div class="control-group">
+					<label class="control-label" style="color: white" for="authorId">Author</label>
+					<div class="controls">
+						<select id="authorId"
+						data-bind="value: authorId, options: authors, optionsValue: 'id', optionsText: 'name', optionsCaption: 'Choose one...'"></select>
+						<a class="btn btn-sm btn-warning" th:href="@{/swagger-ui.html#/authors-controller}">Manage authors</a>
+					</div>
+					<label class="control-label" style="color: white" for="quoteText">Quote</label>
+					<div class="controls">
+						<textarea id="quoteText" cols="50" rows="5"
+						data-bind="value: quoteText" placeholder="Enter quote text..."></textarea>
+					</div>
+					<label class="control-label" style="color: white" for="eventId">Event</label>
+					<div class="controls">
+						<select id="eventId"
+						data-bind="value: eventId, options: events, optionsValue: 'id', optionsText: 'desc', optionsCaption: 'Choose one...'"></select>
+					</div>
+				</div>
+				<div class="bg-info control-group" data-bind="visible: !eventId()">
+					<p>... or create a new event filling up the form below!</p>
+					<label class="control-label" for="eventCountryId">Country</label>
+					<div id="eventCountryId" class="controls">
+						<select data-bind="value: eventCountryName, options: countries, optionsCaption: 'Choose one...'"></select>
+						<a class="btn btn-sm btn-warning" th:href="@{/swagger-ui.html#/Country_Entity}">Manage countries</a>
+					</div>
+					<label class="control-label" for="eventName">Quote</label>
+					<div class="controls">
+						<input id="eventName" size="50"
+						data-bind="value: eventName" placeholder="Enter event name..."></input>
+					</div>
+				</div>
+			</form>
+		</div>
+		<div class="modal-footer">
+			<button class="btn btn-success" data-bind="click: addQuote">Confirm</button>
+			<button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+		</div>
+	</div>
+	<script type="text/javascript">
+	//<![CDATA[
+		function QuoteDialogModel() {
+			var self = this;
+			self.authorId = ko.observable();
+			self.authors = ko.observableArray();
+			ajax('/authors', 'GET').done(function(data) {
+				for (var index in data) {
+					var item = data[index];
+					console.log(item);
+					self.authors.push(item);
+				}
+			})
+
+			self.quoteText = ko.observable();
+
+			self.eventId = ko.observable();
+			self.events = ko.observableArray();
+			self.loadEvents = function() {
+				ajax('/events/all', 'GET').done(function(data) {	//TODO filters
+					self.events([]);	// reset
+					for (var index in data) {
+						var item = data[index];
+						console.log(item);
+						self.events.push({
+							id: item.id,
+							desc: item.name + (item.date == null ? " - " : " (" + item.date + ") - ") + item.country.name
+						})
+					}
+				})
+			}
+
+			self.eventCountryId = ko.observable();
+			self.countries = ko.observableArray();
+			ajax('/api/countries', 'GET').done(function(data) {
+				for (var index in data._embedded.countries) {
+					var item = data._embedded.countries[index];
+					console.log(item);
+					self.countries.push(item.name);
+				}
+			})
+
+			self.loadEvents();
+			self.eventCountryName = ko.observable();
+			self.eventName = ko.observable();
+
+			self.addQuote = function() {
+				var data = {
+					"quoteAuthor": { "id": self.authorId() },
+					"quoteText": self.quoteText()
+				};
+				if (self.eventId()) {
+					data.quoteEvent = { "id": self.eventId() };
+				} else if (self.eventCountryName() && self.eventName()) {
+					//TODO date with calendar
+					data.quoteEvent = { "country": { "name": self.eventCountryName() }, "name": self.eventName() };
+				}
+				console.log(data);
+				ajax('/quotes', 'POST', data).done(function(data) {
+					console.log(data);
+				})
+	            $('#addQuoteDialog').modal('hide');
+				self.authorId(null);
+				self.quoteText("");
+				self.loadEvents();
+				self.eventId(-1);
+				self.eventCountryName("");
+				self.eventName("");
+			}
+		}
+		ko.applyBindings(new QuoteDialogModel(), $('#addQuoteDialog')[0]);
+	//]]>
+	</script>
+</body>
+</html>
